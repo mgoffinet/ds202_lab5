@@ -9,5 +9,54 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 acc <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/accident.csv", stringsAsFactors = FALSE)
 per <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/person.csv", stringsAsFactors = FALSE)
+#library(tidyr)
+library(dplyr)
+library(ggplot2)
 ```
 
+## Part 1: Accident Data
+
+**1)**
+```{r}
+acc %>% group_by(DAY_WEEK) %>% summarize(count = n())
+```
+
+Most accidents happen on Saturdays, followed by Sundays and Fridays. Thursdays fall in the middle and Mondays, Tuesdays, and Wednesdays are the days with least accidents. The overall range here is roughly 1500 accidents, and the four days with least accidents are clustered in the lower 300 of that range. Overall, there are more accidents over the weekend (including Friday) than there are during the week. This could be because people are more likely to go out for leisure purposes over the weekend and are more often drinking than they are when they go out during the week when they are most likely working.
+
+**2)**
+```{r}
+acc %>% filter(HOUR != 99) %>% ggplot(aes(x=HOUR)) + geom_bar() + labs(title="Accidents vs Hour of Day", x="Hour of Day", y="Number of Accidents")
+#filtered out unknown (HOUR == 99)
+```
+
+Most accidents occur in the hours of 5 to 9 pm. This window includes the evening rush hour and dinner time, meaning that more people are out on the road. More cars on the road mean greater chances of accidents. There is also a small spike around 5-7 am, the morning rush hour.
+
+**3)**
+```{r}
+acc %>% filter(DRUNK_DR >= 1) %>% nrow()
+```
+
+8,769 of the total 34,247 accidents in this data set had at least one drunk driver.
+
+## Part 2: Connecting Data
+
+**4)**
+```{r}
+drivers <- per %>% filter(PER_TYP ==1)
+```
+
+**5)**
+```{r}
+joined <- left_join(per, acc)
+# joins by all columns with common names
+```
+
+**6)**
+```{r}
+joined %>% filter(!(SEX==8 | SEX==9) & HOUR!=99) %>% group_by(DAY_WEEK, HOUR, SEX) %>% summarize(count = n())
+joined$SEX <- as.factor(joined$SEX)
+joined %>% filter(!(SEX==8 | SEX==9) & HOUR!=99) %>% ggplot(aes(x=DAY_WEEK,  fill=SEX)) + geom_bar(position="dodge") + facet_wrap(~HOUR) + scale_fill_discrete(name='Sex', labels=c('Male','Female')) + labs(x="Day of the Week", y="Number of Accidents", title="Number of Accidents by Day of the Week, Sex, and Hour of the Day")
+
+```
+
+## Part 3: Connecting Data and Making Maps
