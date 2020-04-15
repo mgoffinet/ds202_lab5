@@ -9,9 +9,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 acc <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/accident.csv", stringsAsFactors = FALSE)
 per <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/person.csv", stringsAsFactors = FALSE)
-#library(tidyr)
-library(dplyr)
+library(maps)
 library(ggplot2)
+library(dplyr)
+library(tidyverse)
 ```
 
 ## Part 1: Accident Data
@@ -60,3 +61,44 @@ joined %>% filter(!(SEX==8 | SEX==9) & HOUR!=99) %>% ggplot(aes(x=DAY_WEEK,  fil
 ```
 
 ## Part 3: Connecting Data and Making Maps
+
+
+**7) and 8)**
+```{r}
+glc <- readxl::read_xlsx('FRPP GLC - United StatesFeb132020.xlsx')
+glc <- glc %>% select('State Name', STATE = 'State Code', COUNTY = 'County Code', 'County Name') %>%
+  mutate(STATE= as.integer(STATE),COUNTY= as.integer(COUNTY)) %>%
+  mutate(`County Name`=tolower(`County Name`),`State Name`=tolower(`State Name`)) %>%
+  unique()
+
+acc2<-acc %>%
+  group_by(STATE,COUNTY)%>%
+  summarize(count=n())%>%
+  select(STATE,COUNTY,count)%>%
+  left_join(glc,by=c('STATE','COUNTY'))
+counties <- map_data('county')
+counties <- counties %>% 
+  mutate(`State Name` = region, `County Name` = subregion) %>% 
+  select(`State Name`, `County Name`, long, lat, group, order)
+acc2<-acc2 %>%
+  full_join(counties,by=c('State Name','County Name'))
+ggplot(acc2,aes(x=long,y=lat,fill=count))+geom_polygon(aes(group=group))+labs(x="Longitude",y="Latitude",title = "Accidents per County")
+
+```
+
+
+**9)**
+```{r}
+accstate <- acc %>% inner_join(per, by = c('ST_CASE', 'STATE', 'COUNTY'))
+
+months <- accstate %>% group_by(MONTH.x)%>% tally()
+
+accstate <- accstate %>% right_join(months, by = "MONTH.x")
+
+
+ggplot(accstate, mapping = aes(x = MONTH.x, y = n, fill = MONTH.x))+ geom_bar(stat = "identity") + facet_wrap("STATE") + scale_fill_gradient(low = 'blue', high = 'orange')+ ggtitle("Accidents per state on a monthly basis")+ ylab("Number of accidents")+ xlab("Month")
+
+```
+
+
+There seems to be accidents no matter what month it is. there is no clear different between accidents in summer v accidents in winter. 
